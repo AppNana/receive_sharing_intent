@@ -162,7 +162,7 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
         val retriever = MediaMetadataRetriever()
         retriever.setDataSource(path)
         val duration = retriever.extractMetadata(METADATA_KEY_DURATION)?.toLongOrNull()
-        val bitmap = retriever.getScaledFrameAtTime(-1, OPTION_CLOSEST_SYNC, 360, 360)
+        val bitmap = retriever.getScaledFrameAtTime(-1, OPTION_CLOSEST_SYNC, 720, 720)
         retriever.release()
         if (bitmap == null) return Pair(null, null)
         val targetFile = File(applicationContext.cacheDir, "${File(path).name}.png")
@@ -180,8 +180,8 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
         val originalBitmap = BitmapFactory.decodeFile(path)
         val ratio = 1.0f * originalBitmap.width / originalBitmap.height
 
-        var imageW = 360
-        var imageH = 360
+        var imageW = 720
+        var imageH = 720
         if (ratio < 1) {
             imageH = (imageW / ratio).toInt()
         } else {
