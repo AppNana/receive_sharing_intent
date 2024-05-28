@@ -15,6 +15,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     var hostAppBundleIdentifier = ""
     var appGroupId = ""
     var sharedMedia: [SharedMediaFile] = []
+    var shareFolder: URL!
 
     /// Override this method to return false if you don't want to redirect to host app automatically
     /// Default is true
@@ -31,6 +32,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         
         // load group and app id from build info
         loadIds()
+        resetShareFolder()
     }
     
     // Redirect to host app when user click on Post
@@ -114,6 +116,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         appGroupId = customAppGroupId ?? defaultAppGroupId
     }
     
+    private func resetShareFolder() {
+        let folderName = "Library/Caches/Share"
+        let tempPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)!
+        let folderPath = tempPath.appending(path: folderName, directoryHint: .isDirectory)
+        if FileManager.default.fileExists(atPath: folderPath.path()) {
+            try? FileManager.default.removeItem(at: folderPath)
+        }
+        try! FileManager.default.createDirectory(at: folderPath, withIntermediateDirectories: false)
+        shareFolder = folderPath
+    }
+    
     
     private func handleMedia(forLiteral item: String, type: SharedMediaType, index: Int, content: NSExtensionItem) {
         sharedMedia.append(SharedMediaFile(
@@ -129,12 +142,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func handleMedia(forUIImage image: UIImage, type: SharedMediaType, index: Int, content: NSExtensionItem){
-        let tempPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)!.appendingPathComponent("TempImage.png")
+        let tempPath = shareFolder.appendingPathComponent("TempImage.png")
         if self.writeTempFile(image, to: tempPath) {
             let newPathDecoded = tempPath.absoluteString.removingPercentEncoding!
             sharedMedia.append(SharedMediaFile(
                 path: newPathDecoded,
                 mimeType: type == .image ? "image/png": nil,
+                thumbnail: getImageThumbnailPath(for: image)?.absoluteString,
                 type: type
             ))
         }
@@ -147,7 +161,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     
     private func handleMedia(forFile url: URL, type: SharedMediaType, index: Int, content: NSExtensionItem) {
         let fileName = getFileName(from: url, type: type)
-        let newPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)!.appendingPathComponent(fileName)
+        let newPath = shareFolder.appendingPathComponent(fileName)
         
         if copyFile(at: url, to: newPath) {
             // The path should be decoded because Flutter is not expecting url encoded file names
@@ -168,6 +182,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 sharedMedia.append(SharedMediaFile(
                     path: newPathDecoded,
                     mimeType: url.mimeType(),
+                    thumbnail: getImageThumbnailPath(for: url)?.absoluteString,
                     type: type
                 ))
             }
@@ -294,6 +309,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)!
             .appendingPathComponent("\(fileName).jpg")
         return path
+    }
+    
+    private func getImageThumbnailPath(for url: URL) -> URL? {
+        guard let image = UIImage(contentsOfFile: url.path()) else {
+            return nil
+        }
+        return getImageThumbnailPath(for: image)
+    }
+    
+    private func getImageThumbnailPath(for image: UIImage) -> URL? {
+        let tempPath = shareFolder.appendingPathComponent("\(UUID().uuidString).png")
+        let thumbnail = image.mx_Thumbnail(size: .init(width: 720, height: 720))
+        guard writeTempFile(thumbnail, to: tempPath) else {
+            return nil
+        }
+        return tempPath
     }
     
     private func toData(data: [SharedMediaFile]) -> Data {
