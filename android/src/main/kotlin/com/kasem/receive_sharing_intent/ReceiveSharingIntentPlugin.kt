@@ -165,9 +165,10 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
         val bitmap = retriever.getScaledFrameAtTime(-1, OPTION_CLOSEST_SYNC, 720, 720)
         retriever.release()
         if (bitmap == null) return Pair(null, null)
-        val targetFile = File(applicationContext.cacheDir, "${File(path).name}.png")
+
+        val targetFile = File(FileDirectory.getCacheDir(applicationContext), "vc${System.currentTimeMillis()}.jpg")
         FileOutputStream(targetFile).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
         }
         bitmap.recycle()
         return Pair(targetFile.path, duration)
@@ -191,7 +192,7 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
         // Resize the bitmap
         val bitmap = Bitmap.createScaledBitmap(originalBitmap, imageW, imageH, true)
 
-        val targetFile = File(applicationContext.cacheDir, "c${System.currentTimeMillis()}.jpg")
+        val targetFile = File(FileDirectory.getCacheDir(applicationContext), "ic${System.currentTimeMillis()}.jpg")
         var outputStream: FileOutputStream? = null
         try {
             outputStream = FileOutputStream(targetFile)

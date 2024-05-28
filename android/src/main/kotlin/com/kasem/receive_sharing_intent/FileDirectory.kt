@@ -18,6 +18,10 @@ import java.io.InputStream
 import java.io.OutputStream
 
 object FileDirectory {
+    fun getCacheDir(context: Context): File {
+        return context.externalCacheDir ?? context.cacheDir
+    }
+
     // 通过 mimeType 推断文件后缀名
     private fun getFileExtensionFromMimeType(mimeType: String): String {
         return MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: ""
@@ -41,7 +45,7 @@ object FileDirectory {
             }
 
             // 创建目录
-            val outputDir = context.externalCacheDir!!.absolutePath + "/from_shared"
+            val outputDir = getCacheDir(context).absolutePath + "/from_shared"
             if (!File(outputDir).exists()) {
                 File(outputDir).mkdirs()
             }
