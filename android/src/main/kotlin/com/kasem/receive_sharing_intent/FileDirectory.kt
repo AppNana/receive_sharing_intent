@@ -19,7 +19,7 @@ import java.io.OutputStream
 
 object FileDirectory {
     fun getCacheDir(context: Context): File {
-        return context.externalCacheDir ?? context.cacheDir
+        return context.externalCacheDir ?: context.cacheDir
     }
 
     // 通过 mimeType 推断文件后缀名
