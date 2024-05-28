@@ -25,6 +25,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.URLConnection
 
+import java.io.IOException
+import android.graphics.BitmapFactory
+
 private const val MESSAGES_CHANNEL = "receive_sharing_intent/messages"
 private const val EVENTS_CHANNEL_MEDIA = "receive_sharing_intent/events-media"
 private const val EVENTS_CHANNEL_TEXT = "receive_sharing_intent/events-text"
@@ -153,6 +156,8 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
 
     // Get video thumbnail and duration.
     private fun getThumbnailAndDuration(path: String, type: MediaType): Pair<String?, Long?> {
+        if (type == MediaType.IMAGE) return Pair(getImageThumbnail(path), null)
+
         if (type != MediaType.VIDEO) return Pair(null, null) // get thumbnail and duration for video only
         val retriever = MediaMetadataRetriever()
         retriever.setDataSource(path)
@@ -168,6 +173,39 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
         return Pair(targetFile.path, duration)
     }
 
+    /**
+     * Get thumbnail for image file.
+     */
+    fun getImageThumbnail(path: String): String? {
+        val originalBitmap = BitmapFactory.decodeFile(path)
+        val ratio = 1.0f * originalBitmap.width / originalBitmap.height
+
+        var imageW = 360
+        var imageH = 360
+        if (ratio < 1) {
+            imageH = (imageW / ratio).toInt()
+        } else {
+            imageW = (imageH * ratio).toInt()
+        }
+
+        // Resize the bitmap
+        val bitmap = Bitmap.createScaledBitmap(originalBitmap, imageW, imageH, true)
+
+        val targetFile = File(applicationContext.cacheDir, "c${System.currentTimeMillis()}.jpg")
+        var outputStream: FileOutputStream? = null
+        try {
+            outputStream = FileOutputStream(targetFile)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+
+            return targetFile.absolutePath
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            outputStream?.close()
+        }
+        return null
+    }
+    
     enum class MediaType(val value: String) {
         IMAGE("image"), VIDEO("video"), TEXT("text"), FILE("file"), URL("url");
 
