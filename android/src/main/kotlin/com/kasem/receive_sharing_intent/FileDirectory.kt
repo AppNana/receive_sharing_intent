@@ -14,8 +14,54 @@ import java.util.*
 import android.webkit.MimeTypeMap
 import android.util.Log
 
+import java.io.InputStream
+import java.io.OutputStream
 
 object FileDirectory {
+    // 通过 mimeType 推断文件后缀名
+    private fun getFileExtensionFromMimeType(mimeType: String): String {
+        return MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: ""
+    }
+
+    // 保存 Uri 数据到本地文件中
+    fun saveContentUriToFile(context: Context, uri: Uri): String? {
+        var inputStream: InputStream? = null
+        var outputStream: OutputStream? = null
+        var outputFile: File?
+
+        try {
+            // 打开输入流并获取MIME类型
+            val contentResolver = context.contentResolver
+            inputStream = contentResolver.openInputStream(uri)
+            val mimeType = contentResolver.getType(uri)
+
+            // 根据MIME类型确定文件后缀名
+            val fileExtension = getFileExtensionFromMimeType(mimeType ?: "").let {
+                if (it.isEmpty()) "" else ".$it"
+            }
+
+            // 创建目录
+            val outputDir = context.externalCacheDir!!.absolutePath + "/from_shared"
+            if (!File(outputDir).exists()) {
+                File(outputDir).mkdirs()
+            }
+
+            // 创建输出文件
+            outputFile = File(outputDir, "M${System.currentTimeMillis()}$fileExtension")
+            outputStream = FileOutputStream(outputFile)
+
+            // 复制数据
+            inputStream?.copyTo(outputStream)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            outputFile = null
+        } finally {
+            inputStream?.close()
+            outputStream?.close()
+        }
+
+        return outputFile?.absolutePath
+    }
 
     /**
      * Get a file path from a Uri. This will get the the path for Storage Access
@@ -27,7 +73,6 @@ object FileDirectory {
      * @author paulburke
      */
     fun getAbsolutePath(context: Context, uri: Uri): String? {
-
         // DocumentProvider
         if (DocumentsContract.isDocumentUri(context, uri)) {
             // ExternalStorageProvider
@@ -45,7 +90,8 @@ object FileDirectory {
                 return try {
                     val id = DocumentsContract.getDocumentId(uri)
                     val contentUri = ContentUris.withAppendedId(
-                            Uri.parse("content://downloads/public_downloads"), java.lang.Long.valueOf(id))
+                        Uri.parse("content://downloads/public_downloads"), java.lang.Long.valueOf(id)
+                    )
 
                     getDataColumn(context, contentUri, null, null)
                 } catch (exception: Exception) {
@@ -87,8 +133,10 @@ object FileDirectory {
      * @param selectionArgs (Optional) Selection arguments used in the query.
      * @return The value of the _data column, which is typically a file path.
      */
-    private fun getDataColumn(context: Context, uri: Uri, selection: String?,
-                              selectionArgs: Array<String>?): String? {
+    private fun getDataColumn(
+        context: Context, uri: Uri, selection: String?,
+        selectionArgs: Array<String>?
+    ): String? {
 
         if (uri.authority != null) {
             var cursor: Cursor? = null

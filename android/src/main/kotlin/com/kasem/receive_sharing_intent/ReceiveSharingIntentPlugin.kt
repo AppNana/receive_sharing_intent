@@ -141,7 +141,7 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
 
     // content can only be uri or string
     private fun toJsonObject(uri: Uri?, text: String?, mimeType: String?): JSONObject? {
-        val path = uri?.let { FileDirectory.getAbsolutePath(applicationContext, it) }
+        val path = uri?.let { FileDirectory.saveContentUriToFile(applicationContext, it) }
         val mType = mimeType ?: path?.let { URLConnection.guessContentTypeFromName(path) }
         val type = MediaType.fromMimeType(mType)
         val (thumbnail, duration) = path?.let { getThumbnailAndDuration(path, type) }
